@@ -37,7 +37,7 @@ Edit `.env` and set:
 - `SPEECH_REGION` to that Speech resource's Azure region identifier, such as `eastus` or `centralindia`
 - `SPEECH_ENDPOINT` to the resource endpoint URL if you also use the speech-to-text demo.
 
-Do not share or commit `.env`. The `.env.example` file contains placeholders only.
+The `.env.example` file contains placeholders only.
 The text-and-image model key and Speech resource key are separate credentials. Spoken answers require an Azure AI Speech resource; standard Text-to-Speech requests use its region-specific REST URL (`https://<region>.tts.speech.microsoft.com/cognitiveservices/v1`). `SPEECH_ENDPOINT` is not the standard neural Text-to-Speech URL.
 
 ## Run
