@@ -1,0 +1,74 @@
+{% extends "base.html" %}{% block content %}
+<h1>Museum Guide</h1>
+<p>Choose a picture of an exhibit, then ask the guide what you would like to know. The AI will respond in text.</p>
+<label for="image">Exhibit picture</label>
+<input id="image" type="file" accept="image/*">
+<label for="question">Your question</label>
+<textarea id="question" rows="3" placeholder="For example: What details can you see on this object?">Describe the object and point out interesting visible details.</textarea>
+<button id="ask-button" type="button">Ask the Museum Guide</button>
+<h2>Guide's answer</h2>
+<pre id="answer" aria-live="polite"></pre>
+<p id="speech-status" aria-live="polite"></p>
+<audio id="spoken-answer" controls hidden></audio>
+<script>
+const imageInput = document.getElementById("image");
+const questionInput = document.getElementById("question");
+const answer = document.getElementById("answer");
+const askButton = document.getElementById("ask-button");
+const speechStatus = document.getElementById("speech-status");
+const spokenAnswer = document.getElementById("spoken-answer");
+let currentAudioUrl = null;
+
+askButton.addEventListener("click", async () => {
+    if (!imageInput.files.length) {
+        answer.textContent = "Please choose an exhibit picture first.";
+        return;
+    }
+
+    const form = new FormData();
+    form.append("image", imageInput.files[0]);
+    form.append("prompt", questionInput.value);
+    answer.textContent = "Looking at the picture...";
+    speechStatus.textContent = "";
+    spokenAnswer.hidden = true;
+    spokenAnswer.pause();
+    if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+    askButton.disabled = true;
+
+    try {
+        const response = await fetch("/api/guide", { method: "POST", body: form });
+        const data = await response.json();
+        if (!response.ok || !data.result) {
+            answer.textContent = data.error || "The guide could not provide an answer.";
+            return;
+        }
+        answer.textContent = data.result;
+        speechStatus.textContent = "Creating spoken answer...";
+        const speechResponse = await fetch("/api/speech/synthesize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: data.result })
+        });
+        if (!speechResponse.ok) {
+            const errorData = await speechResponse.json();
+            speechStatus.textContent = errorData.error || "Could not create spoken answer.";
+            return;
+        }
+
+        currentAudioUrl = URL.createObjectURL(await speechResponse.blob());
+        spokenAnswer.src = currentAudioUrl;
+        spokenAnswer.hidden = false;
+        speechStatus.textContent = "Playing the guide's answer. Use the audio controls to replay it.";
+        try {
+            await spokenAnswer.play();
+        } catch (error) {
+            speechStatus.textContent = "Spoken answer is ready. Press Play below to listen.";
+        }
+    } catch (error) {
+        answer.textContent = "Could not contact the guide. Check that the app is running and try again.";
+    } finally {
+        askButton.disabled = false;
+    }
+});
+</script>
+{% endblock %}
